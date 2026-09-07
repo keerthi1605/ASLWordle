@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Models & data (large / generated — see README for how to obtain/train them)
+models/*.pkl
+models/*.task
+data/raw/
+data/*.json
+data/asl_landmarks.csv
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

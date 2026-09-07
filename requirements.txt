@@ -1,0 +1,24 @@
+# SignWordle dependencies
+# Installed incrementally, phase by phase, so each phase can be verified
+# in isolation. See docs/learning/ for what each library is used for.
+
+# Phase 1 - UI shell
+streamlit>=1.32
+
+# Phase 3 - camera
+opencv-python>=4.9
+
+# Phase 4/5 - hand landmarks + features
+mediapipe>=0.10
+
+# Phase 5/6 - feature math + ASL classifier
+numpy>=1.26
+scikit-learn>=1.4
+joblib>=1.3
+
+# Phase 9 - voice input
+openai-whisper>=20231117
+sounddevice>=0.4
+
+# Image handling (used by Streamlit camera widgets / practice mode)
+Pillow>=10.0

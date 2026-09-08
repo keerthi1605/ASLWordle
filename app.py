@@ -184,7 +184,7 @@ def _encode_frame_for_display(frame_rgb) -> bytes | None:
     return buffer.tobytes() if ok else None
 
 
-@st.fragment(run_every=_CAMERA_TICK_SECONDS, key="asl_camera_fragment")
+@st.fragment(run_every=_CAMERA_TICK_SECONDS)
 def render_asl_tab() -> None:
     """
     Everything camera/hand-tracking related lives inside this

@@ -8,6 +8,8 @@ docs/learning/01_project_architecture.md for why that separation
 matters (this file must stay reusable/testable on its own).
 """
 
+import sys
+
 import cv2
 
 
@@ -34,7 +36,7 @@ class Camera:
         # CAP_DSHOW is the fast, reliable backend on Windows. On other
         # platforms it doesn't exist, so fall back to OpenCV's default
         # auto-detection instead.
-        backend = cv2.CAP_DSHOW if hasattr(cv2, "CAP_DSHOW") else cv2.CAP_ANY
+        backend = cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY
         try:
             cap = cv2.VideoCapture(self.device_index, backend)
         except cv2.error as exc:  # pragma: no cover - defensive

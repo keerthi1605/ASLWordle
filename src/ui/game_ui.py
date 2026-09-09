@@ -120,12 +120,27 @@ def render_status_message(engine) -> None:
         st.warning(st.session_state.message)
 
 
-# Streamlit's st.button doesn't support per-widget background colors
-# without injecting custom CSS/JS, so the on-screen keyboard hints a
-# letter's best-known status with a colored-square emoji prefix instead
-# — a cheap way to carry the same color information onto the keyboard.
-_KEY_PREFIX = {CORRECT: "🟩", PRESENT: "🟨", ABSENT: "⬛", None: ""}
 _STATUS_LABEL = {CORRECT: "correct", PRESENT: "present, wrong spot", ABSENT: "not in word", None: "not tried yet"}
+
+
+def _keyboard_color_css(letter_status: dict) -> str:
+    """Streamlit doesn't expose a background-color parameter on
+    st.button, but every widget's container carries a stable
+    `st-key-<key>` CSS class (see the `key=` each button below is
+    given) -- so a tried letter's whole key can be colored by injecting
+    a scoped CSS rule per letter, rather than the old colored-square
+    emoji prefix. Untried letters get no rule at all and keep
+    Streamlit's normal button styling (which follows the light/dark
+    theme automatically)."""
+    rules = [
+        f'.st-key-key_{letter} button {{'
+        f"background-color:{_TILE_COLORS[status]} !important;"
+        f"border-color:{_TILE_COLORS[status]} !important;"
+        f"color:white !important;}}"
+        for letter, status in letter_status.items()
+        if status is not None
+    ]
+    return f"<style>{''.join(rules)}</style>"
 
 
 def render_keyboard(engine, on_letter, on_backspace, on_clear, on_submit) -> None:
@@ -136,11 +151,17 @@ def render_keyboard(engine, on_letter, on_backspace, on_clear, on_submit) -> Non
     letter_status = state["letter_status"]
     disabled = state["game_over"]
 
+    st.markdown(_keyboard_color_css(letter_status), unsafe_allow_html=True)
+
     for row in _KEYBOARD_ROWS:
         cols = st.columns(len(row))
         for col, letter in zip(cols, row):
             status = letter_status.get(letter)
-            label = f"{_KEY_PREFIX[status]}{letter}"
+            # Whole-key background now carries the color (see CSS
+            # above); the symbol is kept on the label too so status
+            # never depends on color alone (same accessibility rule
+            # the grid tiles follow -- see _TILE_SYMBOLS).
+            label = f"{letter} {_TILE_SYMBOLS[status]}".rstrip()
             help_text = f"{letter}: {_STATUS_LABEL[status]}"
             if col.button(label, key=f"key_{letter}", disabled=disabled, help=help_text, use_container_width=True):
                 on_letter(letter)

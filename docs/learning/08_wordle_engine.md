@@ -83,13 +83,17 @@ The class wraps `evaluate_guess()` with everything a real game needs:
 
 `submit_guess()` is the only way to mutate this state. It always
 validates first (`validate_guess`): correct length, letters only, and
-(optionally) present in the curated word list — see
-`src/game/word_list.py`. Rejected guesses **do not** consume an
-attempt, which matters for UX: a typo shouldn't cost you a turn.
+(optionally) present in the real Wordle word list — see
+`src/game/word_list.py`, and §12a in the README for where that list
+comes from. Rejected guesses **do not** consume an attempt, which
+matters for UX: a typo shouldn't cost you a turn.
 
-`check_dictionary=False` exists specifically so ASL/voice-driven
-guesses aren't blocked by our necessarily-small hardcoded word list —
-that flag is a seam for Phase 8/9, not used by keyboard mode.
+`check_dictionary=False` exists as a seam for tests (build an engine
+with a known target and skip the dictionary check to test scoring
+logic in isolation) — every real input mode (keyboard, ASL, voice)
+uses the default `check_dictionary=True`, going through the same
+`is_valid_word()` check via the shared `_submit_word()` funnel in
+`app.py`. No input mode gets a looser dictionary than any other.
 
 ## 4. Important concepts
 

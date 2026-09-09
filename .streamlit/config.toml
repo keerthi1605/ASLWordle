@@ -1,0 +1,20 @@
+# Custom SignWordle color theme.
+#
+# Streamlit supports separate [theme.light] / [theme.dark] tables (unset
+# keys fall back to [theme]) -- these automatically apply whichever mode
+# the viewer has selected (Settings menu, or "Use system setting").
+#
+# Light mode: beige background, taupe text (replaces plain white/black).
+# Dark mode: night-blue background, denim-blue text.
+
+[theme]
+
+[theme.light]
+backgroundColor = "#F5F5DC"
+secondaryBackgroundColor = "#EAE0C8"
+textColor = "#483C32"
+
+[theme.dark]
+backgroundColor = "#070c36"
+secondaryBackgroundColor = "#0b1030"
+textColor = "#79BAEC"

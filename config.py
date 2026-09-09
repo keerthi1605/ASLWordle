@@ -17,7 +17,13 @@ ASSETS_DIR = BASE_DIR / "assets"
 ASL_MODEL_PATH = MODELS_DIR / "asl_classifier.pkl"
 HAND_LANDMARKER_MODEL_PATH = MODELS_DIR / "hand_landmarker.task"
 ASL_LANDMARKS_CSV_PATH = DATA_DIR / "asl_landmarks.csv"
-WORD_LIST_PATH = DATA_DIR / "words.txt"
+# Real NYT/original-Wordle word lists (see src/game/word_list.py docstring
+# for source + licensing note). Two separate files because the real game
+# treats them differently: only WORDLE_ANSWERS_PATH words are ever picked
+# as the target; WORDLE_ALLOWED_GUESSES_PATH is extra words it accepts
+# as guesses but never selects as the answer.
+WORDLE_ANSWERS_PATH = DATA_DIR / "wordle_answers.txt"
+WORDLE_ALLOWED_GUESSES_PATH = DATA_DIR / "wordle_allowed_guesses.txt"
 STATS_PATH = DATA_DIR / "stats.json"
 
 # --- Wordle rules --------------------------------------------------------

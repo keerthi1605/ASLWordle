@@ -2,12 +2,12 @@
 
 **Learn ASL. Play Wordle. Interact Naturally.**
 
-> Status: ASL letter recognition is fully wired end-to-end — hold a
-> static ASL letter to the camera and it's stabilized and typed into
-> the Wordle grid live, the same way keyboard input is. **You still
-> need to record your own training data** (see §12 Dataset below) —
-> nobody's hand signs are pre-loaded, on principle (no fabricated
-> datasets). Keyboard mode is fully playable regardless. This README
+> Status: all three input modes are wired end-to-end. ASL: hold a
+> static letter to the camera and it's stabilized and typed into the
+> grid live (**you need to record your own training data first** — see
+> §12 Dataset, nobody's hand signs are pre-loaded, on principle). Voice:
+> say a word, Whisper transcribes it, you confirm before it's
+> submitted. Keyboard is fully playable with zero setup. This README
 > grows as each phase lands — sections marked `(planned)` aren't built
 > yet.
 
@@ -60,7 +60,7 @@ and traditional input can all drive one shared application.
 - [x] Random Forest ASL letter classifier (train your own — see §12/§13)
 - [x] Temporal stabilization (rolling majority vote, no repeated/spammed letters)
 - [x] ASL → Wordle integration — live camera recognition types into the grid
-- [ ] Whisper voice input with confirm/reject — Phase 9
+- [x] Whisper voice input — record → transcribe → confirm/reject → submit
 - [ ] ASL practice mode — Phase 10
 - [ ] Stats, hints (optional, only after core works) — later
 
@@ -100,7 +100,8 @@ signwordle/
 │   ├── game/                # Wordle rules — no CV/ML/UI knowledge
 │   ├── vision/               # Camera, MediaPipe, features, ASL classifier,
 │   │                         #   temporal stabilizer — no Wordle knowledge
-│   ├── speech/                # Whisper voice pipeline
+│   ├── speech/                # Whisper voice pipeline (record, transcribe,
+│   │                         #   normalize, extract candidate) — no Wordle knowledge
 │   └── ui/                    # Streamlit rendering helpers
 ├── models/                  # hand_landmarker.task, asl_classifier.pkl (not in git)
 ├── data/                     # Word list, your recorded asl_landmarks.csv, stats
@@ -111,9 +112,10 @@ signwordle/
 
 ## 7. Tech Stack
 
-Python, Streamlit, OpenCV, MediaPipe, NumPy, scikit-learn, Whisper,
-Pillow. No backend server, database, auth, Docker, or cloud deploy —
-this is intentionally a single local Streamlit process.
+Python, Streamlit, OpenCV, MediaPipe, NumPy, scikit-learn, OpenAI
+Whisper (+ PyTorch, sounddevice), Pillow. No backend server, database,
+auth, Docker, or cloud deploy — this is intentionally a single local
+Streamlit process.
 
 ## 8. Installation
 
@@ -160,7 +162,7 @@ venv/Scripts/python.exe -m unittest tests.test_wordle_engine -v
 venv/Scripts/python.exe -m unittest discover -s tests -v
 ```
 
-62 tests total. Wordle-engine tests (18) cover valid/invalid guesses,
+80 tests total. Wordle-engine tests (18) cover valid/invalid guesses,
 exact-position matches, wrong-position matches, duplicate-letter edge
 cases (both "guess repeats a letter the target only has once" and
 "target repeats a letter the guess only has once"), win, lose,
@@ -175,9 +177,12 @@ majority vote directly — holding a letter accepts it once, releasing
 and re-showing it accepts it again, low-confidence/noisy frames don't
 count. ASL-recognizer tests (6) train a tiny throwaway classifier on
 synthetic data (not your real model) to check prediction/confidence
-and the "no model yet" fallback. Everything except the camera/model
-hardware tests needs no webcam at all. Run from the project root (no
-pytest needed — plain `unittest`).
+and the "no model yet" fallback. Whisper tests (18) check text
+normalization and candidate extraction with plain strings, plus real
+model-loading/transcription checks that skip gracefully if Whisper
+can't load. Everything except the camera/microphone/model hardware
+tests needs no hardware at all. Run from the project root (no pytest
+needed — plain `unittest`).
 
 **Manual camera test**: run the app, click **✋ ASL**, then
 **▶ Start Camera** — you should see your own mirrored live video with
@@ -198,14 +203,44 @@ status line should show "Predicted: X (NN%) — hold steady…", then
 grid immediately. Backspace/Clear/Submit work the same as keyboard
 mode. See [docs/learning/07_realtime_prediction.md](docs/learning/07_realtime_prediction.md).
 
+**Manual voice test**: click **🎤 Voice** (first click loads the
+Whisper model, a few seconds), then **🎤 Record** and say a 5-letter
+word within ~4 seconds. You should see "You said: ..." with exactly
+what Whisper heard, and — if it found a valid word — a candidate plus
+**[Confirm Guess] [Try Again]**; nothing submits until you click
+Confirm. If it misheard or you said something else, it says so
+honestly instead of guessing. See
+[docs/learning/09_whisper.md](docs/learning/09_whisper.md).
+
 ## 11. Wordle Algorithm
 
 Scoring is a two-pass comparison, not a naive `letter in target`
 check, specifically to handle duplicate letters correctly. See
 [docs/learning/08_wordle_engine.md](docs/learning/08_wordle_engine.md)
-for the full explanation with a worked example.
+for the full explanation with a worked example. Word data (the real
+Wordle word lists) is covered next in §12a.
 
 ## 12. Dataset
+
+### 12a. Word list
+
+`data/wordle_answers.txt` (2,315 words) and
+`data/wordle_allowed_guesses.txt` (10,657 words) are the **real
+original-Wordle word lists** — before the NYT acquired Wordle, the game
+shipped these two arrays directly in its public client-side JavaScript.
+They've since been mirrored on GitHub by the community (this project
+uses [cfreshman's gists](https://gist.github.com/cfreshman/a03ef2cba789d8cf00c08f767e0fad7b));
+**this is not an NYT-licensed dataset**, just a community-preserved
+copy of code Wordle once shipped publicly — stated honestly rather than
+implied to be "official." Verified on import: 2,315 + 10,657 = 12,972
+words total, matching the real game's well-documented word count
+exactly. [src/game/word_list.py](src/game/word_list.py) loads both at
+startup: `WORDS` (the 2,315 answers) is the only pool a target is ever
+picked from; `is_valid_word()` accepts both files combined — same
+relationship the real game has (e.g. "AAHED" is accepted as a guess,
+but never chosen as the answer).
+
+### 12b. ASL landmark data
 
 **There is no downloaded ASL dataset in this project — on principle.**
 A landmark-level ASL alphabet dataset (already-extracted 21-point
@@ -258,7 +293,25 @@ constraint that shaped the stabilizer's tuning:
 [07_realtime_prediction.md](docs/learning/07_realtime_prediction.md),
 [11_integration.md](docs/learning/11_integration.md).
 
+## 15. Voice Pipeline
+
+```
+🎤 Record (4s) → WhisperService.transcribe() → raw text
+ → normalize_text() (uppercase, strip punctuation)
+ → extract_candidate_word() (find one 5-letter alphabetic token)
+ → "You said: ..." always shown, honestly
+ → if found: [Confirm Guess] [Try Again]  (never auto-submitted)
+ → Confirm → same _submit_word() keyboard/ASL use → Wordle engine
+```
+
+No internet-hosted speech API is used — Whisper runs entirely locally
+(CPU by default, GPU automatically if `torch.cuda.is_available()`).
+Whisper can and does mishear audio; this project never disguises that
+— see [docs/learning/09_whisper.md](docs/learning/09_whisper.md) for a
+real (not hypothetical) example encountered while building this, and
+the full explanation of audio, sample rates, and normalization.
+
 ---
 
-Sections 15-17 (Whisper pipeline, HCI principles, Limitations, Future
-improvements) will be filled in as those phases are built.
+Sections 16-17 (HCI principles, Limitations, Future improvements) will
+be filled in as those phases are built.
